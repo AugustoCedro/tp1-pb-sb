@@ -4,10 +4,13 @@ import com.example.demo.dto.*;
 import com.example.demo.model.Aventureiro;
 import com.example.demo.service.AventureiroService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.websocket.server.PathParam;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/aventureiros")
 @AllArgsConstructor
+@Validated
 public class AventureiroController {
 
     private AventureiroService service;
@@ -33,8 +37,13 @@ public class AventureiroController {
 
     @GetMapping
     public ResponseEntity<PagedResponseDTO<AventureiroResponseDTO>> consultarAventureiros(
-            @RequestHeader(value = "X-Page",required = false, defaultValue = "0") int page,
-            @RequestHeader(value = "X-Size",required = false, defaultValue = "10") int size,
+            @RequestHeader(value = "X-Page",required = false, defaultValue = "0")
+            @Min(value = 0, message = "Page não pode ser negativa")
+            int page,
+            @RequestHeader(value = "X-Size",required = false, defaultValue = "10")
+            @Min(value = 1, message = "Size deve ser no mínimo 1")
+            @Max(value = 50, message = "Size deve ser no máximo 50")
+            int size,
             @RequestParam(required = false) String classe,
             @RequestParam(required = false) Boolean ativo,
             @RequestParam(required = false) Integer nivel

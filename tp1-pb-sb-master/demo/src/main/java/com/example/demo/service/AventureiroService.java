@@ -8,6 +8,7 @@ import com.example.demo.model.Aventureiro;
 import com.example.demo.model.Classe;
 import com.example.demo.model.Companheiro;
 import com.example.demo.model.Especie;
+import com.example.demo.repository.AventureiroRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,40 +21,20 @@ import java.util.Optional;
 @AllArgsConstructor
 public class AventureiroService {
 
-    private List<Aventureiro> aventureiros = new ArrayList<>();
-
-    public AventureiroService(){
-        aventureiros.add(new Aventureiro("Josué", Classe.MAGO,100));
-        aventureiros.add(new Aventureiro("Augusto",Classe.CLERIGO,200));
-    }
+    private final AventureiroRepository repository;
 
     public Aventureiro registrar(AventureiroDTO dto){
         Aventureiro aventureiro = new Aventureiro(dto.nome(), isClasseValid(dto.classe()), dto.nivel());
-        aventureiros.add(aventureiro);
+        repository.adicionar(aventureiro);
         return aventureiro;
     }
 
     public Aventureiro consultarPorId(Long id) {
-        return aventureiros.stream()
-                .filter(a -> a.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new AventureiroNotFoundException("Aventureiro com ID " + id + " não encontrado"));
-    }
-
-    public List<Aventureiro> consultarTodos() {
-        return List.copyOf(aventureiros);
+        return repository.consultarPorId(id);
     }
 
     public Aventureiro atualizar(Long id, AventureiroUpdateDTO dto) {
-        Aventureiro aventureiro = consultarPorId(id);
-
-        Optional.ofNullable(dto.nome()).ifPresent(aventureiro::setNome);
-        Optional.ofNullable(dto.nivel()).ifPresent(aventureiro::setNivel);
-        Optional.ofNullable(dto.classe())
-                .map(this::isClasseValid)
-                .ifPresent(aventureiro::setClasse);
-
-        return aventureiro;
+       return repository.atualizar(id,dto);
     }
 
     public Aventureiro encerrarVinculo(Long id) {
@@ -84,24 +65,22 @@ public class AventureiroService {
         return aventureiro;
     }
     public PagedResponseDTO<AventureiroResponseDTO> consultarPaginado(int page, int size, String classe, Boolean ativo, Integer nivel) {
-        List<AventureiroResponseDTO> aventureiroList = aventureiros.stream()
-                .filter(a -> classe == null || a.getClasse().equals(isClasseValid(classe)))
-                .filter(a -> ativo == null || a.getAtivo().equals(ativo))
-                .filter(a -> nivel == null || a.getNivel().equals(nivel))
+        List<Aventureiro> aventureiroList = repository.consultarPaginado(classe,ativo,nivel);
+        List<AventureiroResponseDTO> aventureiroResponseList = aventureiroList
+                .stream()
                 .map(a -> new AventureiroResponseDTO(a.getId(),a.getNome(),a.getNivel(),a.getClasse(),a.getAtivo()))
                 .toList();
         int total = aventureiroList.size();
         int fromIndex = page * size;
         int toIndex = Math.min(fromIndex + size,total);
 
-        List<AventureiroResponseDTO> conteudo = fromIndex >= total ? List.of() : aventureiroList.subList(fromIndex,toIndex);
+        List<AventureiroResponseDTO> conteudo = fromIndex >= total ? List.of() : aventureiroResponseList.subList(fromIndex,toIndex);
         return new PagedResponseDTO<>(page,size,total,conteudo);
     }
+
     private Classe isClasseValid(String classe){
         return Arrays.stream(Classe.values())
                 .filter(c -> c.name().equalsIgnoreCase(String.valueOf(classe)))
                 .findFirst().orElseThrow(() -> new InvalidClassException("Classe inválida"));
     }
-
-
 }
